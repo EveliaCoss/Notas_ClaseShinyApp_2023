@@ -1,0 +1,563 @@
+---
+title: "01 Intro a Shiny app"
+author: "Domingo Martínez"
+date: "2023-08-18"
+output:                                   
+  html_document:                   
+    collapsed: true                # Contraer celdas de salida (creo...)
+    code_folding: show             # Mostrar el código
+    toc: true                      # Mostrar la tabla de contenidos
+    toc_depth: 3                   # Niveles de títulos que se mostrarán
+    toc_float: true                # Índices o contenidos flotantes 
+    smooth_scroll: true            # Activar el scroll
+    highlight: tango                # Destacar
+    df_print: paged                # Mostrar los dataframes en páginas
+    number_sections: true          # Numeración de contenidos
+    theme: united               # Tema
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Mi primera shiny app
+
+Fuente: <https://mastering-shiny.org/basic-app.html>
+
+Recursos: <https://raw.githubusercontent.com/rstudio/cheatsheets/main/shiny.pdf>
+
+Mis notas:
+
+- Add control widgets: <https://shiny.posit.co/r/getstarted/shiny-basics/lesson3/>
+- Using Action Buttons: <https://shiny.posit.co/r/articles/build/action-buttons/>
+
+
+Las dos partes básicas de una Shiny app son:
+
+1. La Interfaz de usuario UI por sus siglas en inglés.
+
+2. La Función de servidor server <- function()
+
+La *UI* controla cómo lucirá la app, mientras que la *server function()* controla cómo trabajará la app.
+
+Shiny usa **programación reactiva** para actualizar automáticamente las salidas cuando las entradas cambian.
+
+
+## PASO 1: Instalación de Shiny y llamado de la librería
+
+```{r Instalación de Shiny}
+# install.packages(shiny, dependencies = T)
+library(shiny)
+```
+
+## PASO 2: Creamos un directorio en el cual vivirá nuestra Shiny app
+
+```{bash Crear el directorio de la app desde la terminal}
+pwd
+mkdir mi_1era_shiny_app
+ls
+```
+
+## PASO 3: Guardamos el siguiente código en el script de la app
+
+```{r Estructura básica de una Shiny app}
+library(shiny) # Llamamos la librería Shiny
+# Ahora definimos la interfaz de usuario
+ui <- fluidPage(
+  "Me encanta programar en R :)"
+)
+# Ahora declaramos la function server
+server <- function(input, output, session) {
+}
+
+# Esto es la parte final, integramos la UI y la function server con shinyApp
+shinyApp(ui, server)
+```
+
+Lo que hará este script es lo siguiente:
+
+1. Llamamos a shiny con library(shiny)
+
+2. Con fluidPage() declaramos la página HTML con la que interactuará el usuario, en este caso solo contiene la frase: “Me encanta programar en R :)”.
+
+3. En la function() definimos lo que debe ejecutar nuestra app, en este caso no tiene ninguna instrucción.
+
+4. Finalmente, la función shinyApp() construye y ejecuta nuestra app con base en la UI y la server function().
+
+Para correr la app podemos dar click en el botón Run App o presionar el atajo: ctrl + shift + enter.
+
+Para detenerla podemos cerrar la ventana HTML, presionar el botón STOP, o dar “escape” en la consola.
+
+Para lanzar nuestra app en cualquier otro navegador copiamos y pegamos la dirección que muestra en consola, en este caso: Listening on http://127.0.0.1:5620
+
+## PASO 4: Le añadimos controles a la interfaz de usuario
+
+```{r Añadimos controles a la UI}
+library(shiny)
+ui <- fluidPage(
+  selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
+  verbatimTextOutput("summary"),
+  tableOutput("table")
+)
+shinyApp(ui, server)
+```
+
+El comando fluidPage() declara la organización de la página HTML.
+
+El comando selectInput() pertenece a Shiny, y crea una lista de la cual se podrán elegir uno o varios elementos.
+
+La librería datasets contien varias bases de datos (podemos explorarla con datasets::)
+
+El comando verbatimTextOutput le indica a la app dónde colocar un render que consiste en una salida de código.
+
+El comando tableOutpu() le indica a la app dónde colocar un render que consiste en un salida en formato tabular.
+
+## PASO 5: Agregamos salidas a la función del servidor
+
+```{r Declaramos los cómputos para los outpus}
+library(shiny)
+server <- function(input, output, session) {
+  output$summary <- renderPrint({
+    dataset <- get(input$dataset, "package:datasets")
+    summary(dataset)
+  })
+  
+  output$table <- renderTable({
+    dataset <- get(input$dataset, "package:datasets")
+    dataset
+  })
+}
+shinyApp(ui, server)
+```
+
+# Conceptos básicos de la UI
+
+<p align="justify">
+En este scipt veremos diversos modos para capturar datos (*Inputs*) desde la interfaz del usuario (UI) y diversos modos de presentar las salidas de R (*Outputs*).
+</p>
+
+## Inputs
+
+A continuación veremos la **estructura común** que tienen todas las funciones de entrada (*inputs*).
+
+### Estructura común
+
+- El primer argumento de las funciones de entrada es su ID: **inputId**. La función del servidor accede al respectivo Id mediante el nombre que le asignamos, por ejemplo, con input$nombre_del_Id. IMPORTANTE: ¡El id de cada input debe ser ÚNICO!
+
+- El segundo argumento (en algunas funciones) es **label** (la etiqueta) esta etiqueta es la que le aparecerá al usuario al ejectur la app. A continuación veamos un ejemplo de cómo se declaran estos argumentos.
+
+```{r Declaración de argumentos en un Input}
+library(shiny)
+ui <- fluidPage(
+  sliderInput("min", "Limit (minimum)", value = 50, min = 0, max = 100)
+)
+shinyApp(ui, server)
+```
+
+A continuación exploremos algunos de los controles disponibles en shiny.
+
+### Entradas de texto
+
+Entre las funciones de entrada, destacan las siguientes:
+
+- textInput(): Pensada en capturar textos breves.
+- passwordInput(): Pensada en capturar texto de contraseñas.
+- textAreaInput(): Pensada para capturar párrafos que escriba el usuario.
+
+Vamos a ver cómo lucen estos campos de entradas.
+
+```{r Controles para inputs de texto}
+library(shiny)
+ui <- fluidPage(
+  textInput("nombre", "Ingrese nombre de usuario"),
+  passwordInput("password", "Ingrese contraseña"),
+  textAreaInput("answer", "¿Por quién votará en la próxima elección?", rows = 3)
+)
+
+shinyApp(ui, server)
+```
+
+
+### Entradas numéricas
+
+Con alguna de las siguientes funciones de entrada podemos declarar campos numéricos.
+
+- numericInput(): Permite teclear un valor numérico.
+- sliderInput(): Permite elegir un valor en una barra de desplazamiento.
+- sliderInput(): Permite elegir un rango numérico en una barra de desplazamiento.
+
+Probemos estos controles:
+
+```{r Controles para inputs numéricos}
+library(shiny)
+
+ui <- fluidPage(
+  numericInput("num", "Aquí puedes indicar un número", value = 0, min = 0, max = 100),
+  sliderInput("num2", "Aquí puedes elegir un valor", value = 50, min = 0, max = 100000),
+  sliderInput("rng", "Range", value = c(10, 20), min = 0, max = 1000)
+)
+
+shinyApp(ui, server)
+```
+
+Nota: En value es el valor por defecto.
+
+### Entradas tipo fecha
+
+- dateInput(): nos permite elegir una fecha
+- dateRangeInput(): nos permite elegir una fecha de inicio y una fecha final.
+
+Probemos el siguiente código:
+
+```{r Controles paraentradas tipo fecha}
+library(shiny)
+ui <- fluidPage(
+  dateInput("fecha", "Te permite elegir una fecha"),
+  dateRangeInput("fecha_doble", "Te permite determinar una fecha de inicio y una de fín.")
+)
+shinyApp(ui, server)
+```
+
+### Controles de opción múltiple
+
+- selectInput(): permite elegir un elemento de una lista desplegable.
+- radioButtons(): muestra la lista de opciones y permite elegir una opción.
+- checkboxGroupInput(): permite elegir varios elementos de la lista.
+- checkboxInput(): permite crear una casilla de verificación.
+
+Probemos...
+
+```{r Controles para opción múltiple}
+library(shiny)
+animals <- c("pulga", "caballo", "serpiente", "dinosaurio")
+
+ui <- fluidPage(
+  selectInput("animal", "Elige tu animal favorito", animals),
+  radioButtons("animal2", "Elige tu animal favorito", animals),
+  checkboxGroupInput("animal3", "Elige tus animales favoritos", animals),
+  checkboxInput("acepto", "He leído las condiciones y estoy de acuerdo", value = T),
+  checkboxInput("acepto", "He leído las condiciones y estoy de acuerdo")
+)
+shinyApp(ui, server)
+```
+
+### Agregar botones
+
+- actionButton(): Muestra un botón que ejecturá alguna acción.
+- actionLink(): Muestra un botón que ejecutará un enlace.
+
+```{r Controles para agregar botones}
+library(shiny)
+ui <- fluidPage(
+  actionButton("click", "Da click aquí"),
+  actionLink("table", "Ir a la tabla de resultados", icon = icon("table"))
+)
+shinyApp(ui, server)
+```
+
+
+### 2.2.8 Ejercicios 
+
+Ejercicios presentes en la seccion 2.2.8. Exercises https://mastering-shiny.org/basic-ui.html#exercises-1
+
+1. When space is at a premium, it’s useful to label text boxes using a placeholder that appears inside the text entry area. How do you call textInput() to generate the UI below?
+
+Entrada de texto con valor determinado
+
+```{r Ejercicio 1}
+ui <- fluidPage(
+  textInput("caption", "Caption", value = "Data Summary"),
+  verbatimTextOutput("value")
+)
+shinyApp(ui, server)
+```
+
+2. Carefully read the documentation for sliderInput() to figure out how to create a date slider, as shown below.
+
+SlinderInput con fecha
+
+```{r Ejercicio 2}
+ui <- fluidPage(
+sliderInput("fecha", "Aquí puedes elegir un valor", min = as.Date("2020-09-16","%Y-%m-%d"), 
+            max = as.Date("2020-09-23","%Y-%m-%d"),
+            value=as.Date("2020-09-17"),timeFormat="%Y-%m-%d")
+)
+
+shinyApp(ui, server)
+```
+
+Respuesta, https://stackoverflow.com/questions/40908808/how-to-sliderinput-for-dates
+
+3. Create a slider input to select values between 0 and 100 where the interval between each selectable value on the slider is 5. Then, add animation to the input widget so when the user presses play the input widget scrolls through the range automatically.
+
+SliderInput con boton de reinicio
+
+```{r Ejercicio 3}
+ui <- fluidPage(
+  sliderInput("num2", "Aquí puedes elegir un valor", value = 5, min = 0, max = 100),
+  actionButton("do", "Play!", class = "btn-success") # class = Colorear el boton en verde
+)
+
+server <- function(input, output) {
+  observeEvent(input$do, {
+    updateSliderInput(inputId = "num2", value = 0) # Podemos cambiar este valor, para que cuando demos click cambie a ese valor
+  })
+}
+
+shinyApp(ui, server)
+```
+
+Nota: Ejemplo tomado de: https://mastering-shiny.org/action-dynamic.html, parecido a RESET.
+
+
+4. If you have a moderately long list in a selectInput(), it’s useful to create sub-headings that break the list up into pieces. Read the documentation to figure out how. (Hint: the underlying HTML is called <optgroup>.)
+
+```{r Ejercicio 4}
+library(shiny)
+
+ui <- fluidPage(
+    selectInput("personajes", "Elige tu personaje:",
+      list(`Heroes` = list("Iron Man", "Capitana Marvel", "Black Widow", "Wolverine"), #outgroup 1
+           `Villanos` = list("Namor", "Ultron", "Johann Schmidt", "Hela"), #outgroup 2
+           `Neutrales` = list("Wade Wilson", "Vision", "Riot")) #outgroup 3
+    ), #end selectInput
+    textOutput("result") # Observar la informacion seleccionada
+)
+
+server = function(input, output) {
+    output$result <- renderText({
+      paste("You chose", input$personajes)
+    })
+}
+
+shinyApp(ui, server)
+```
+
+Me base en el siguiente ejemplo https://shiny.posit.co/r/reference/shiny/1.5.0/selectinput
+
+```{r Create a select list input control — selectInput}
+## Only run examples in interactive R sessions
+if (interactive()) {
+
+# demoing group support in the `choices` arg
+shinyApp(
+  ui = fluidPage(
+    selectInput("state", "Choose a state:",
+      list(`East Coast` = list("NY", "NJ", "CT"),
+           `West Coast` = list("WA", "OR", "CA"),
+           `Midwest` = list("MN", "WI", "IA"))
+    ),
+    textOutput("result")
+  ),
+  server = function(input, output) {
+    output$result <- renderText({
+      paste("You chose", input$state)
+    })
+  }
+)
+}
+
+shinyApp(ui, server)
+
+# Ejemplo de https://shiny.posit.co/r/reference/shiny/1.5.0/selectinput
+```
+
+Otro ejemplo de tablas
+
+```{r}
+## Only run examples in interactive R sessions
+if (interactive()) {
+
+# basic example
+shinyApp(
+  ui = fluidPage(
+    selectInput("variable", "Variable:",
+                c("Cylinders" = "cyl",
+                  "Transmission" = "am",
+                  "Gears" = "gear")),
+    tableOutput("data")
+  ),
+  server = function(input, output) {
+    output$data <- renderTable({
+      mtcars[, c("mpg", input$variable), drop = FALSE]
+    }, rownames = TRUE)
+  }
+)
+}
+
+shinyApp(ui, server)
+
+# Ejemplo de https://shiny.posit.co/r/reference/shiny/1.5.0/selectinput
+```
+
+
+## Outputs
+
+<p align="justify">
+Las funciones de salida en la UI, generan espacios que luego serán "llenados por la función al servidor."
+</p>
+
+Las funciones de salida (output) deben tener un únido Id, el cual se declara en el primer argumento de la funición.
+
+IMPORTANTE: Cada función de salida se acopla o parea con una función de renderizado.
+
+Existen **tres tipos de outputs**, que corresponden con:
+
+- textos.
+- tablas.
+- gráficos.
+
+A continuación exploraremos cada tipo de *output* y su correspondiente función de renderizado.
+
+### Salidas de texto
+
+En texto tenemos dos opciones principales:
+
+- textOutput(): Para salidas de texto "normal".
+- verbatimTextOutput(): Para salidas de texto desde la consola.
+
+Por lo general,
+
+- textOutput() se asocia con la función **renderText()**
+- verbatimTextOutput(): se asocia con la función **renderPrint()**
+
+```{r Salidas de texto}
+library(shiny)
+ui <- fluidPage(
+  textOutput("texto"), #label
+  verbatimTextOutput("codigo") #label
+)
+
+server <- function(input, output, session) {
+ output$texto <- renderText("Ejemplo de un texto normal") # solo texto
+ output$codigo <- renderPrint(mean(c(10,5,9,8,7))) # Resultado de consola, concatenar
+}
+shinyApp(ui, server)
+```
+
+NOTA: session hace la magia, para lograr ejectuar el codigo por cada usuario respendando el codigo sin modificarlo.
+
+
+### Tablas de salida
+
+Tenemos dos funciones para mostrar *dataframes* en una salida tabular:
+
+- tableOutput(): prepara el espacio para mostrar un dataframe en forma de tabla **estática** con la funcion **renderTable()**.
+- dataTableOutput(): preapara el espacio para mostrar un dataframe en forma de tabla **dinámica** con la función **renderDataTable()**.
+
+Vamos a probar estas salidas...
+
+```{r Salidas tabulares}
+library(shiny)
+ui <- fluidPage(
+  tableOutput("tabla_estatica"),
+  dataTableOutput("tabla_dinamica")
+)
+server <- function(input, output, session) {
+  output$tabla_estatica <- renderTable(head(mtcars))
+  output$tabla_dinamica <- renderDataTable(mtcars, options = list(pageLength = 5)) #Primero 5 datos en forma de lista
+}
+shinyApp(ui, server)
+```
+
+
+### Gráficos de salida
+
+Podemos presentar en una salida cualquier gráfico construído en R, las función de salida para gráficos es:
+
+- **plotOutput()**: prepara un espacio para mostrar un gráfico, el cual es renderizado con la función **renderPlot()**.
+
+```{r Salidas de gráficos}
+library(shiny)
+library(ggplot2)
+ui <- fluidPage(
+  plotOutput("grafico1", width = "400px")
+)
+server <- function(input, output, session) {
+  #output$grafico1 <- renderPlot(plot(1:5), res = 96)
+  output$grafico1 <- renderPlot(ggplot(mtcars, aes(x=mpg, y=cyl, fill=gear)) + geom_bar(), res = 96)
+}
+shinyApp(ui, server)
+```
+
+Tres tipos de salida :  texto, tabla y graficas.
+
+### Ejercicios
+
+Vamos a elegir una función de input, luego elegimos una función output y vinculamos la salida.
+
+Declaramos un slider para capturar un par de números.
+Multiplicamos ambos números y mostramos el resultado.
+
+```{r Ejercicio 01}
+library(shiny)
+ui <- fluidPage(
+  numericInput("numero1", "elige el primer número", value = 0, min = 0, max = 100),
+  numericInput("numero2", "elige el segundo número", value = 0, min = 0, max = 100),
+  verbatimTextOutput("resultado", placeholder = T)
+)
+
+server <- function(input, output, session){
+  output$resultado <- renderPrint(input$numero1 * input$numero2)
+}
+    
+shinyApp(ui, server)
+```
+
+
+Le pedimos al usuario que ingrese texto de forma libre, y hacemos una nube de palabras.
+
+```{r}
+devtools::install_github("lchiffon/wordcloud2")
+```
+
+```{r}
+library(wordcloud2)
+library(shiny)
+
+
+
+```
+
+
+```{r}
+library(wordcloud)
+library(RColorBrewer)
+
+words <- c("Librería,","Secuenciación,","Transcripción,","samtools,","RNA,","","Regulación,","Nucleótido,","Traducción","RNA,","secuenciación,","proteínas,","regulación,","expresión","génica","Secuenciación,","expresión","diferencial,","transcriptoma,","fenotipos","exones","Transcriptoma,","expresión","diferencial,","RNA,","diferencia","celular","Transcripción,","regulación,","expresión,","muestra","Expresion,","exones,","transcriptoma,","UTR,","hisat2,","splicing,","Transcritoma,","splicing,","cDNA")
+wordcloud(words, colors = RColorBrewer::brewer.pal(5,name = "BuPu"))
+```
+
+
+Shiny app ejemplo
+
+```{r}
+if(require(shiny)){
+  library(wordcloud2)
+   # Global variables can go here
+   n <- 1
+
+   # Define the UI
+   ui <- bootstrapPage(
+      numericInput('size', 'Size of wordcloud', n),
+     wordcloud2Output('wordcloud2')
+   )
+
+
+   # Define the server code
+   server <- function(input, output) {
+      output$wordcloud2 <- renderWordcloud2({
+      # wordcloud2(demoFreqC, size=input$size)
+        wordcloud2(demoFreq, size=input$size)
+      })
+   }
+   # Return a Shiny app object
+   # Sys.setlocale("LC_CTYPE","chs") #if you use Chinese character
+   ## Do not Run!
+   shinyApp(ui = ui, server = server)
+}
+
+# ejemplo tomado de https://cran.r-project.org/web/packages/wordcloud2/vignettes/wordcloud.html
+```
+
