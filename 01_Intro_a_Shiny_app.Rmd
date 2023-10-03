@@ -561,3 +561,313 @@ if(require(shiny)){
 # ejemplo tomado de https://cran.r-project.org/web/packages/wordcloud2/vignettes/wordcloud.html
 ```
 
+
+
+# Reactividad
+
+<p align="justify">
+El paradigma de **programación reactiva** es elegante y poderoso, pero puede ser confuso al principio. La idea es que, cuando un **input cambia**, todos los **outputs** dependientes cambien también.
+</p>
+
+<p align="justify">
+Empezaremos con un repaso de la **función al servidor**, viendo con más detalle cómo funcionan los **inputs** y los **outputs**, luego veremos cómo funciona la **programación reactiva** para evitar duplicidad de código.
+</p>
+
+## La función al servidor
+
+La estructura de la shiny app luce así:
+
+```{r Estructura básica de la app}
+library(shiny)
+
+ui <- fluidPage(
+  # front end interface
+)
+
+server <- function(input, output, session) {
+  # back end logic
+}
+
+shinyApp(ui, server)
+```
+
+- La **UI** es simple porque cada usuario accede exactamente al mismo HTML.
+- La **función al servidor** es más complicada, pues cada usuario necesita una versión independiente de la app, si el usuario A mueve el slider, el usuario B no debería ver esos cambios.
+- Para lograr esta independencia, Shiny evoca, un nuevo ambiente local en cada llamada a la función del servidor.
+- La **función al servidor** tiene tres argumentos: **input**, **output** y **session**, los cuales se crean automáticamente cuando comienza una sesión, ya que nosotros nunca llamamos la función al servidor por nosotros mismos, sino que lo hace Shiny.
+
+### Inputs
+
+<p align="justify">
+El argumento **input** es un objeto tipo lista que contiene todos los datos de entrada enviados por la interfaz HTML, por ejemplo:
+</p>
+
+```{r Ejemplo de input numérico}
+ui <- fluidPage(
+  numericInput("contador", label = "Number of values", value = 100)
+)
+```
+
+Recordemos que, para acceder al valor del **input** usamos la expresión **input$contador** y, este valor se actulizará automáticamente cuando la usuaria cambie el valor en el control.
+
+IMPORTANTE: los objetos **input** son solamente de lectura, es decir, no puedo modificar su valor en la **función del servidor**:
+
+```{r Error al intentar modificar el valor de un input}
+library(shiny)
+
+ui <- fluidPage(
+  numericInput("contador", label = "Number of values", value = 100))
+  
+server <- function(input, output, session) {
+  input$contador <- 10  # Intentamos asignar 
+}
+
+shinyApp(ui, server)
+```
+
+Error in `$<-`(`*tmp*`, contador, value = 10) : 
+  Can't modify read-only reactive value 'contador'
+  
+Signficado no podemos agregar un valor fijo.
+
+
+Si pudiéramos modificar el valor de un input, entonces tendría concflicto con el valor que asigna el usuario.
+
+MUY IMPORTANTE: los **inputs** son selectivos respecto a quién puede leerlos. Para poder leer un **input** debemos estar en un *contexto reactivo*, como los contextos creados por las funciones **renderText()** o **reactive()**. Esto permite que los **outputs** se actualicen automáticamente cuando cambia algún **input**. 
+
+```{r Error al llamar un input fuera de un contexto reactivo}
+library(shiny)
+
+ui <- fluidPage(
+  numericInput("contador", label = "Number of values", value = 100))
+
+server <- function(input, output, session) {
+  message("El valor de input$contador es ", input$contador)
+}
+
+shinyApp(ui, server)
+```
+
+Error in input$contador : 
+  Can't access reactive value 'contador' outside of reactive consumer.
+ℹ Do you need to wrap inside reactive() or observe()?
+
+
+### Outputs
+
+<p align="justify">
+El **output** también es un objeto tipo lista que se llama por su ID. La diferencia con el **input** es que el **output** se usa para enviar información, mientras que el **input** se usa para recibirla, tal como podemos observar en el siguiente ejemplo. Recuerda que, el objeto **output** va en *combo* con alguna función de renderizado.
+</p>
+
+```{r Ejemplo de output}
+library(shiny)
+
+ui <- fluidPage(
+  textOutput("saludo")
+)
+
+server <- function(input, output, session) {
+  output$saludo <- renderText("Hola banda!!!")
+}
+
+shinyApp(ui, server)
+```
+
+IMPORTANTE: *El ID del output se declara en la UI.*
+
+La **función de renderizado** hace dos cosas:
+
+1. Configura un contexto reactivo especial que automáticamente mapea los **inputs** que usarán los **outputs**.
+
+2. Convierte los **outpust** de R en HTML para poder mostrarlos en una página web.
+
+Si no declaramos la **función de renderizado**, la app no trabajará.
+
+```{r Error por no declarar la función de renderizado}
+library(shiny)
+
+server <- function(input, output, session) {
+  output$greeting <- "Hello human"
+}
+
+shinyApp(ui, server)
+```
+
+NOTA: no se declaro el ambiente reactivo.
+
+Si intentamos leer desde un **ouput**, también tendremos un error.
+
+```{r Error por tratar de leer desde un output}
+library(shiny)
+
+server <- function(input, output, session) {
+  message("El saludo es:", output$greeting)}
+
+shinyApp(ui, server)
+```
+
+Error in output$greeting : Can't read output 'greeting'
+
+## Programación reactiva
+
+<p align="justify">
+La magia de Shiny aparece cuando interactúan las **inputs** con las **outputs**, tal como podemos apreciar en el siguiente ejemplo.
+</p>
+
+```{r Ejemplo con interaccióń inputs - outputs}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("nombre", "¿Cuál es tu nombre?"),
+  textOutput("saludo")
+)
+
+server <- function(input, output, session) {
+  output$saludo <- renderText({
+    paste0("Hola ", input$nombre, " !!! :)")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+<p align="justify">
+IMPORTANTE: No tuvimos que decirle al **ouput** cuándo actualizar su valor, Shiny lo hace.
+</p>
+
+<p align="justify">
+**Específicamente:** el código le indica a Shiny cómo podría crear la cadena de texto, solo encaso de ser necesario. Shiny decidirá cuándo crear tal cadena, incluso si debe o no crear la cadena de texto, o si debería correr siquiera el código.
+</p>
+
+<p align="justify">
+En otras palabras, la decisión de cuándo ejecutar el código, es solo de Shiny, nosotros no lo decidimos. Solamente proveemos a Shiny de *las recetas* para ejecutar, no de los comando de ejecución.
+</p>
+
+
+
+### Programación imperativa vs. programación declarativa
+
+<p align="justify">
+Usar *recetas* y *comandos* define dos estilos de programación:
+
+- En la **programación imperativa**, tú escribes un comando y éste se ejecuta inmediatamente. Esto es lo que hacemos normalmente en un R script o un Rmd, los comandos se ejecutan secuencialmente en forma inmediata.
+
+- En la **programación declarativa**, tú declaras objetivos de alto nivel o pones restricciones, y confías en que *alguien más* decida cuándo y cómo convertir esos objetivos en acciones específicas. ¡Este es el estilo de programación en Shiny!
+</p>
+
+<p align="justify">
+En la **programación imperativa** decimos: "Hazme una torta", en la **programación declarativa** decimos: Asegúrate que haya una torta en el refri pa' cuando la busquemos.
+</p>
+
+### La pereza
+
+<p align="justify">
+La shiny app hará el mínimo esfuerzo para actualizar los outputs que ve la usuario. Esto tiene la siguiente desventaja...
+</p>
+
+```{r Desventaja en la pereza de Shiny}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("nombre", "¿Cuál es tu nombre?"),
+  textOutput("saludo")
+)
+
+server <- function(input, output, session) {
+  output$saludo <- renderText({
+    paste0("Hola ", input$nombre, " !!! :)")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+¿Ya viste que el output "saludo" no exite en el chunk anterior?
+
+### La gráfica reactiva
+
+<p align="justify">
+La siguiente **gráfica reactiva**, nos muestra cómo se relacionan **inputs** y **outputs**:
+</p>
+
+![La gráfica reactiva](graph-1b.png)  
+
+<p align="justify">
+El **input** y el **output** tiene un símbolo propio en la gráfica, y se conectan cuando el **output** accede al **input**. En otras palabras, la **gráfica reativa** nos dice que, será necesario volver a calcular el saludo cuando se cambie el nombre. Así, **podemos decir que, *greeting* depende reactivamente de *name*.**
+</p>
+
+<p align="justify">
+La convención gráfica nos dice que, el **input** *name*, conecta naturalmente con el **output** *greeting*, tal como se muestra en la siguiente gráfica.
+</p>
+
+![Conexión en la gráfica reactiva](graph-1a.png)
+
+La gráfica reactiva, o gráfica de reactividad, nos permite hacer un esquema de cómo queremos que trabaje nuestra app.
+
+### Expresiones reactivas
+
+<p align="justify">
+Un componente MUY IMPORTANTE  de las **graficas reactivas** es la **expresión reactiva**, la cual es una herramienta para *reducir la duplicidad de código*, al agregar **nodos** a nuestra gráfica, tal como se muestra a continuación.
+</p>
+
+![Gráfica reactiva con un nodo adicional](graph-2b.png)
+
+<p align="justify">
+En el siguiente ejemplo añadiremos una expresión reactiva con la función reactive(), la guardaremos con el nombre *string*, y la llamaremos en el renderizado, renderText().
+</p>
+
+```{r Ejemplo de una expresión reactiva}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("name", "¿Cuál es tu nombre?"),
+  textOutput("greeting")
+)
+
+server <- function(input, output, session) {
+  string <- reactive(paste0("Hello ", input$name, " !!! :)"))
+  output$greeting <- renderText(string())
+}
+
+shinyApp(ui, server)
+```
+
+Las **expresiones reactivas** toman **inputs** y producen **outputs**, por eso tienen una forma tal en la **gráfica reactiva** que encajan entre los **inputs** y los **outputs**.
+
+### Orden de ejecución
+
+<p align="justify">
+Debemos recordar que, el orden en el que corre el código, está determinado por la **gráfica reactiva**, a diferencia de la mayoría de los scripts en que el órden de ejecución depende del número de línea. Por ejemplo, repliquemos el ejemplo anterior, pero poniendo la expresión reactiva al final.
+</p>
+
+```{r Ejemplo de una expresión reactiva en distinto orden}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("name", "¿Cuál es tu nombre?"),
+  textOutput("greeting")
+)
+
+server <- function(input, output, session) {
+  output$greeting <- renderText(string())
+  string <- reactive(paste0("Hello ", input$name, " !!! :)"))
+}
+
+shinyApp(ui, server)
+```
+
+¡EL RESULTADO ES EL MISMO! El órden de ejecucción depende solamente de la **gráfica reactiva**, no del órden en que declararon las variables en la **función del servidor**.
+
+- Al igual que los **inputs**, también puedes usar los resultados de una **expresión reactiva** y presentarlos en un **output**.
+
+- De la misma forma que los **outputs**, las **expresiones reactivas** dependen de los **inputs**, y saben automáticamente cuándo necesitan actualizarse.
+
+Por lo anterior, usaremos el término **producers** para referirnos tanto a los **inputs** como a los **resultados de una expresión reactiva**, y usaremos el término **consumers** para referirnos tanto a las **expresiones reactivas** como a los **outputs**, tal como se muestra en la siguiente figura.
+
+![Consumers y producers](producers-consumers.png)
+
+### Beneficios de usar expesiones reactivas
+
+
+
+
