@@ -1,0 +1,1021 @@
+---
+title: "01 Intro a Shiny app"
+author: "Domingo Martínez"
+date: "2023-08-18"
+output:                                   
+  html_document:                   
+    collapsed: true                # Contraer celdas de salida (creo...)
+    code_folding: show             # Mostrar el código
+    toc: true                      # Mostrar la tabla de contenidos
+    toc_depth: 3                   # Niveles de títulos que se mostrarán
+    toc_float: true                # Índices o contenidos flotantes 
+    smooth_scroll: true            # Activar el scroll
+    highlight: tango                # Destacar
+    df_print: paged                # Mostrar los dataframes en páginas
+    number_sections: true          # Numeración de contenidos
+    theme: united               # Tema
+# runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Mi primera shiny app
+
+Fuente: <https://mastering-shiny.org/basic-app.html>
+
+Recursos: <https://raw.githubusercontent.com/rstudio/cheatsheets/main/shiny.pdf>
+
+Las dos partes básicas de una Shiny app son:
+
+1. La Interfaz de usuario UI por sus siglas en inglés.
+
+2. La Función de servidor server <- function()
+
+La *UI* controla cómo lucirá la app, mientras que la *server function()* controla cómo trabajará la app.
+
+Shiny usa **programación reactiva** para actualizar automáticamente las salidas cuando las entradas cambian.
+
+
+## PASO 1: Instalación de Shiny y llamado de la librería
+```{r Instalación de Shiny}
+# install.packages(shiny, dependencies = T)
+library(shiny)
+```
+
+## PASO 2: Creamos un directorio en el cual vivirá nuestra Shiny app
+```{bash Crear el directorio de la app desde la terminal}
+pwd
+mkdir mi_1era_shiny_app
+ls
+```
+
+## PASO 3: Guardamos el siguiente código en el script de la app
+```{r Estructura básica de una Shiny app}
+library(shiny) # Llamamos la librería Shiny
+# Ahora definimos la interfaz de usuario
+ui <- fluidPage(
+  "Me encanta programar en R :)"
+)
+# Ahora declaramos la function server
+server <- function(input, output, session) {
+}
+
+# Esto es la parte final, integramos la UI y la function server con shinyApp
+shinyApp(ui, server)
+```
+
+Lo que hará este script es lo siguiente:
+
+1. Llamamos a shiny con library(shiny)
+
+2. Con fluidPage() declaramos la página HTML con la que interactuará el usuario, en este caso solo contiene la frase: “Me encanta programar en R :)”.
+
+3. En la function() definimos lo que debe ejecutar nuestra app, en este caso no tiene ninguna instrucción.
+
+4. Finalmente, la función shinyApp() construye y ejecuta nuestra app con base en la UI y la server function().
+
+Para correr la app podemos dar click en el botón Run App o presionar el atajo: ctrl + shift + enter.
+
+Para detenerla podemos cerrar la ventana HTML, presionar el botón STOP, o dar “escape” en la consola.
+
+Para lanzar nuestra app en cualquier otro navegador copiamos y pegamos la dirección que muestra en consola, en este caso: Listening on http://127.0.0.1:5620
+
+## PASO 4: Le añadimos controles a la interfaz de usuario
+```{r Añadimos controles a la UI}
+library(shiny)
+ui <- fluidPage(
+  selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
+  verbatimTextOutput("summary"),
+  tableOutput("table")
+)
+shinyApp(ui, server)
+```
+
+El comando fluidPage() declara la organización de la página HTML.
+
+El comando selectInput() pertenece a Shiny, y crea una lista de la cual se podrán elegir uno o varios elementos.
+
+La librería datasets contien varias bases de datos (podemos explorarla con datasets::)
+
+El comando verbatimTextOutput le indica a la app dónde colocar un render que consiste en una salida de código.
+
+El comando tableOutpu() le indica a la app dónde colocar un render que consiste en un salida en formato tabular.
+
+## PASO 5: Agregamos salidas a la función del servidor
+```{r Declaramos los cómputos para los outpus}
+library(shiny)
+server <- function(input, output, session) {
+  output$summary <- renderPrint({
+    dataset <- get(input$dataset, "package:datasets")
+    summary(dataset)
+  })
+  
+  output$table <- renderTable({
+    dataset <- get(input$dataset, "package:datasets")
+    dataset
+  })
+}
+shinyApp(ui, server)
+```
+
+# Conceptos básicos de la UI
+
+<p align="justify">
+En este scipt veremos diversos modos para capturar datos (*Inputs*) desde la interfaz del usuario (UI) y diversos modos de presentar las salidas de R (*Outputs*).
+</p>
+
+## Inputs
+
+A continuación veremos la **estructura común** que tienen todas las funciones de entrada (*inputs*).
+
+### Estructura común
+
+- El primer argumento de las funciones de entrada es su ID: **inputId**. La función del servidor accede al respectivo Id mediante el nombre que le asignamos, por ejemplo, con input$nombre_del_Id. IMPORTANTE: ¡El id de cada input debe ser ÚNICO!
+
+- El segundo argumento (en algunas funciones) es **label** (la etiqueta) esta etiqueta es la que le aparecerá al usuario al ejectur la app. A continuación veamos un ejemplo de cómo se declaran estos argumentos.
+
+```{r Declaración de argumentos en un Input}
+library(shiny)
+sliderInput("min", "Limit (minimum)", value = 50, min = 0, max = 100)
+shinyApp(ui, server)
+```
+
+A continuación exploremos algunos de los controles disponibles en shiny.
+
+### Entradas de texto
+
+Entre las funciones de entrada, destacan las siguientes:
+
+- textInput(): Pensada en capturar textos breves.
+- passwordInput(): Pensada en capturar texto de contraseñas.
+- textAreaInput(): Pensada para capturar párrafos que escriba el usuario.
+
+Vamos a ver cómo lucen estos campos de entradas.
+
+```{r Controles para inputs de texto}
+library(shiny)
+ui <- fluidPage(
+  textInput("nombre", "Ingrese nombre de usuario"),
+  passwordInput("password", "Ingrese contraseña"),
+  textAreaInput("answer", "¿Por quién votará en la próxima elección?", rows = 3)
+)
+
+shinyApp(ui, server)
+```
+
+### Entradas numéricas
+
+Con alguna de las siguientes funciones de entrada podemos declarar campos numéricos.
+
+- numericInput(): Permite teclear un valor numérico.
+- sliderInput(): Permite elegir un valor en una barra de desplazamiento.
+- sliderInput(): Permite elegir un rango numérico en una barra de desplazamiento.
+
+Probemos estos controles:
+
+```{r Controles para inputs numéricos}
+library(shiny)
+
+ui <- fluidPage(
+  numericInput("num", "Aquí puedes indicar un número", value = 0, min = 0, max = 100),
+  sliderInput("num2", "Aquí puedes elegir un valor", value = 50, min = 0, max = 100000),
+  sliderInput("rng", "Range", value = c(10, 20), min = 0, max = 1000)
+)
+
+shinyApp(ui, server)
+```
+
+### Entradas tipo fecha
+
+- dateInput(): nos permite elegir una fecha
+- dateRangeInput(): nos permite elegir una fecha de inicio y una fecha final.
+
+Probemos el siguiente código:
+
+```{r Controles para entradas tipo fecha}
+library(shiny)
+ui <- fluidPage(
+  dateInput("fecha", "Te permite elegir una fecha"),
+  dateRangeInput("fecha_doble", "Te permite determinar una fecha de inicio y una de fín.")
+)
+shinyApp(ui, server)
+```
+
+### Controles de opción múltiple
+
+- selectInput(): permite elegir un elemento de una lista desplegable.
+- radioButtons(): muestra la lista de opciones y permite elegir una opción.
+- checkboxGroupInput(): permite elegir varios elementos de la lista.
+- checkboxInput(): permite crear una casilla de verificación.
+
+Probemos...
+
+```{r Controles para opción múltiple}
+library(shiny)
+animals <- c("pulga", "caballo", "serpiente", "dinosaurio")
+
+ui <- fluidPage(
+  selectInput("animal", "Elige tu animal favorito", animals),
+  radioButtons("animal2", "Elige tu animal favorito", animals),
+  checkboxGroupInput("animal3", "Elige tus animales favoritos", animals),
+  checkboxInput("acepto", "He leído las condiciones y estoy de acuerdo", value = T),
+  checkboxInput("acepto", "He leído las condiciones y estoy de acuerdo")
+)
+shinyApp(ui, server)
+```
+
+### Agregar botones
+
+- actionButton(): Muestra un botón que ejecturá alguna acción.
+- actionLink(): Muestra un botón que ejecutará un enlace.
+
+```{r Controles para agregar botones}
+library(shiny)
+ui <- fluidPage(
+  actionButton("click", "Da click aquí"),
+  actionLink("table", "Ir a la tabla de resultados", icon = icon("table"))
+)
+shinyApp(ui, server)
+```
+
+
+## Outputs
+
+<p align="justify">
+Las funciones de salida en la UI, generan espacios que luego serán "llenados por la función al servidor."
+</p>
+
+Las funciones de salida (output) deben tener un únido Id, el cual se declara en el primer argumento de la función.
+
+IMPORTANTE: Cada función de salida se acopla o parea con una función de renderizado.
+
+Existen **tres tipos de outputs**, que corresponden con:
+
+- textos.
+- tablas.
+- gráficos.
+
+A continuación exploraremos cada tipo de *output* y su correspondiente función de renderizado.
+
+### Salidas de texto
+
+En texto tenemos dos opciones principales:
+
+- textOutput(): Para salidas de texto "normal".
+- verbatimTextOutput(): Para salidas de texto desde la consola.
+
+Por lo general,
+
+- textOutput() se asocia con la función **renderText()**
+- verbatimTextOutput(): se asocia con la función **renderPrint()**
+
+```{r Salidas de texto}
+library(shiny)
+ui <- fluidPage(
+  textOutput("texto"),
+  verbatimTextOutput("codigo")
+)
+server <- function(input, output, session) {
+ output$texto <- renderText("Ejemplo de un texto normal")
+ output$codigo <- renderPrint(mean(c(10,5,9,8,7)))
+}
+shinyApp(ui, server)
+```
+
+### Tablas de salida
+
+Tenemos dos funciones para mostrar *dataframes* en una salida tabular:
+
+- tableOutput(): prepara el espacio para mostrar un dataframe en forma de tabla estática con la funcion renderTable().
+- dataTableOutput(): preapara el espacio para mostrar un dataframe en forma de tabla dinámica con la función renderDataTable().
+
+Vamos a probar estas salidas...
+
+```{r Salidas tabulares}
+library(shiny)
+ui <- fluidPage(
+  tableOutput("tabla_estatica"),
+  dataTableOutput("tabla_dinamica")
+)
+server <- function(input, output, session) {
+  output$tabla_estatica <- renderTable(head(mtcars))
+  output$tabla_dinamica <- renderDataTable(mtcars, options = list(pageLength = 5))
+}
+shinyApp(ui, server)
+```
+
+
+### Gráficos de salida
+
+Podemos presentar en una salida cualquier gráfico construído en R, las función de salida para gráficos es:
+
+- plotOutput(): prepara un espacio para mostrar un gráfico, el cual es renderizado con la función renderPlot().
+
+```{r Salidas de gráficos}
+library(shiny)
+ui <- fluidPage(
+  plotOutput("grafico1", width = "400px")
+)
+server <- function(input, output, session) {
+  output$grafico1 <- renderPlot(plot(1:5), res = 96)
+}
+shinyApp(ui, server)
+```
+
+### Ejercicios
+
+Vamos a elegir una función de input, luego elegimos una función output y vinculamos la salida.
+
+Declaramos un slider para capturar un par de números.
+Multiplicamos ambos números y mostramos el resultado.
+
+```{r Ejercicio 01}
+library(shiny)
+ui <- fluidPage(
+  numericInput("numero1", "elige el primer número", value = 0, min = 0, max = 100),
+  numericInput("numero2", "elige el segundo número", value = 0, min = 0, max = 100),
+  verbatimTextOutput("resultado", placeholder = T)
+)
+
+server <- function(input, output, session){
+  output$resultado <- renderPrint(input$numero1 * input$numero2)
+}
+    
+shinyApp(ui, server)
+```
+
+<p align="justify">
+
+</p>
+
+# Reactividad
+
+<p align="justify">
+El paradigma de **programación reactiva** es elegante y poderoso, pero puede ser confuso al principio. La idea es que, cuando un **input cambia**, todos los **outputs** dependientes cambien también.
+</p>
+
+<p align="justify">
+Empezaremos con un repaso de la **función al servidor**, viendo con más detalle cómo funcionan los **inputs** y los **outputs**, luego veremos cómo funciona la **programación reactiva** para evitar duplicidad de código.
+</p>
+
+## La función al servidor
+
+La estructura de la shiny app luce así:
+
+```{r Estructura básica de la app}
+library(shiny)
+
+ui <- fluidPage(
+  # front end interface
+)
+
+server <- function(input, output, session) {
+  # back end logic
+}
+
+shinyApp(ui, server)
+```
+
+- La **UI** es simple porque cada usuario accede exactamente al mismo HTML.
+- La **función al servidor** es más complicada, pues cada usuario necesita una versión independiente de la app, si el usuario A mueve el slider, el usuario B no debería ver esos cambios.
+- Para lograr esta independencia, Shiny evoca, un nuevo ambiente local en cada llamada a la función del servidor.
+- La **función al servidor** tiene tres argumentos: **input**, **output** y **session**, los cuales se crean automáticamente cuando comienza una sesión, ya que nosotros nunca llamamos la función al servidor por nosotros mismos, sino que lo hace Shiny.
+
+### Inputs
+
+<p align="justify">
+El argumento **input** es un objeto tipo lista que contiene todos los datos de entrada enviados por la interfaz HTML, por ejemplo:
+</p>
+
+```{r Ejemplo de input numérico}
+ui <- fluidPage(
+  numericInput("contador", label = "Number of values", value = 100)
+)
+```
+
+Recordemos que, para acceder al valor del **input** usamos la expresión **input$contador** y, este valor se actulizará automáticamente cuando la usuaria cambie el valor en el control.
+
+IMPORTANTE: los objetos **input** son solamente de lectura, es decir, no puedo modificar su valor en la **función del servidor**:
+
+```{r Error al intentar modificar el valor de un input}
+library(shiny)
+
+ui <- fluidPage(
+  numericInput("contador", label = "Number of values", value = 100))
+  
+server <- function(input, output, session) {
+  input$contador <- 10  # Intentamos asignar 
+}
+
+shinyApp(ui, server)
+```
+
+Si pudiéramos modificar el valor de un input, entonces tendría concflicto con el valor que asigna el usuario.
+
+MUY IMPORTANTE: los **inputs** son selectivos respecto a quién puede leerlos. Para poder leer un **input** debemos estar en un *contexto reactivo*, como los contextos creados por las funciones **renderText()** o **reactive()**. Esto permite que los **outputs** se actualicen automáticamente cuando cambia algún **input**. 
+
+```{r Error al llamar un input fuera de un contexto reactivo}
+library(shiny)
+
+ui <- fluidPage(
+  numericInput("contador", label = "Number of values", value = 100))
+
+server <- function(input, output, session) {
+  message("El valor de input$contador es ", input$contador)
+}
+
+shinyApp(ui, server)
+```
+
+### Outputs
+
+<p align="justify">
+El **output** también es un objeto tipo lista que se llama por su ID. La diferencia con el **input** es que el **output** se usa para enviar información, mientras que el **input** se usa para recibirla, tal como podemos observar en el siguiente ejemplo. Recuerda que, el objeto **output** va en *combo* con alguna función de renderizado.
+</p>
+
+```{r Ejemplo de output}
+library(shiny)
+
+ui <- fluidPage(
+  textOutput("saludo")
+)
+
+server <- function(input, output, session) {
+  output$saludo <- renderText("Hola banda!!!")
+}
+
+shinyApp(ui, server)
+```
+
+IMPORTANTE: *El ID del output se declara en la UI.*
+
+La **función de renderizado** hace dos cosas:
+
+1. Configura un contexto reactivo especial que automáticamente mapea los **inputs** que usarán los **outputs**.
+
+2. Convierte los **outpust** de R en HTML para poder mostrarlos en una página web.
+
+Si no declaramos la **función de renderizado**, la app no trabajará.
+
+```{r Error por no declarar la función de renderizado}
+library(shiny)
+
+server <- function(input, output, session) {
+  output$greeting <- "Hello human"
+}
+
+shinyApp(ui, server)
+```
+
+Si intentamos leer desde un **ouput**, también tendremos un error.
+
+```{r Error por tratar de leer desde un output}
+library(shiny)
+
+server <- function(input, output, session) {
+  message("El saludo es:", output$greeting)}
+
+shinyApp(ui, server)
+```
+
+
+## Programación reactiva
+
+<p align="justify">
+La magia de Shiny aparece cuando interactúan las **inputs** con las **outputs**, tal comom podemos apreciar en el siguiente ejemplo.
+</p>
+
+```{r Ejemplo con interaccióń inputs - outputs}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("nombre", "¿Cuál es tu nombre?"),
+  textOutput("saludo")
+)
+
+server <- function(input, output, session) {
+  output$saludo <- renderText({
+    paste0("Hola ", input$nombre, " !!! :)")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+<p align="justify">
+IMPORTANTE: No tuvimos que decirle al **ouput** cuándo actualizar su valor, Shiny lo hace.
+</p>
+
+<p align="justify">
+**Específicamente:** el código le indica a Shiny cómo podría crear la cadena de texto, solo encaso de ser necesario. Shiny decidirá cuándo crear tal cadena, incluso si debe o no crear la cadena de texto, o si debería correr siquiera el código.
+</p>
+
+<p align="justify">
+En otras palabras, la decisión de cuándo ejecutar el código, es solo de Shiny, nosotros no lo decidimos. Solamente proveemos a Shiny de *las recetas* para ejecutar, no de los comando de ejecución.
+</p>
+
+
+
+### Programación imperativa vs. programación declarativa
+
+<p align="justify">
+Usar *recetas* y *comandos* define dos estilos de programación:
+
+- En la **programación imperativa**, tú escribes un comando y éste se ejecuta inmediatamente. Esto es lo que hacemos normalmente en un R script o un Rmd, los comandos se ejecutan secuencialmente en forma inmediata.
+
+- En la **programación declarativa**, tú declaras objetivos de alto nivel o pones restricciones, y confías en que *alguien más* decida cuándo y cómo convertir esos objetivos en acciones específicas. ¡Este es el estilo de programación en Shiny!
+</p>
+
+<p align="justify">
+En la **programación imperativa** decimos: "Hazme una torta", en la **programación declarativa** decimos: Asegúrate que haya una torta en el refri pa' cuando la busquemos.
+</p>
+
+### La pereza
+
+<p align="justify">
+La shiny app hará el mínimo esfuerzo para actualizar los outputs que ve la usuario. Esto tiene la siguiente desventaja...
+</p>
+
+```{r Desventaja en la pereza de Shiny}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("nombre", "¿Cuál es tu nombre?"),
+  textOutput("saludos")
+)
+
+server <- function(input, output, session) {
+  output$saludo <- renderText({
+    paste0("Hola ", input$nombre, " !!! :)")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+¿Ya viste que el output "saludo" no exite en el chunk anterior?
+
+### La gráfica reactiva
+
+<p align="justify">
+La siguiente **gráfica reactiva**, nos muestra cómo se relacionan **inputs** y **outputs**:
+</p>
+
+![La gráfica reactiva](graph-1b.png)  
+
+<p align="justify">
+El **input** y el **output** tiene un símbolo propio en la gráfica, y se conectan cuando el **output** accede al **input**. En otras palabras, la **gráfica reativa** nos dice que, será necesario volver a calcular el saludo cuando se cambie el nombre. Así, **podemos decir que, *greeting* depende reactivamente de *name*.**
+</p>
+
+<p align="justify">
+La convención gráfica nos dice que, el **input** *name*, conecta naturalmente con el **output** *greeting*, tal como se muestra en la siguiente gráfica.
+</p>
+
+![Conexión en la gráfica reactiva](graph-1a.png)
+
+La gráfica reactiva, o gráfica de reactividad, nos permite hacer un esquema de cómo queremos que trabaje nuestra app.
+
+### Expresiones reactivas
+
+<p align="justify">
+Un componente MUY IMPORTANTE  de las **graficas reactivas** es la **expresión reactiva**, la cual es una herramienta para *reducir la duplicidad de código*, al agregar **nodos** a nuestra gráfica, tal como se muestra a continuación.
+</p>
+
+![Gráfica reactiva con un nodo adicional](graph-2b.png)
+
+<p align="justify">
+En el siguiente ejemplo añadiremos una expresión reactiva con la función reactive(), la guardaremos con el nombre *string*, y la llamaremos en el renderizado, renderText().
+</p>
+
+```{r Ejemplo de una expresión reactiva}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("name", "¿Cuál es tu nombre?"),
+  textOutput("greeting")
+)
+
+server <- function(input, output, session) {
+  string <- reactive(paste0("Hello ", input$name, " !!! :)"))
+  output$greeting <- renderText(string())
+}
+
+shinyApp(ui, server)
+```
+
+Las **expresiones reactivas** toman **inputs** y producen **outputs**, por eso tienen una forma tal en la **gráfica reactiva** que encajan entre los **inputs** y los **outputs**.
+
+### Orden de ejecución
+
+<p align="justify">
+Debemos recordar que, el orden en el que corre el código, está determinado por la **gráfica reactiva**, a diferencia de la mayoría de los scripts en que el órden de ejecución depende del número de línea. Por ejemplo, repliquemos el ejemplo anterior, pero poniendo la expresión reactiva al final.
+</p>
+
+```{r Ejemplo de una expresión reactiva en distinto orden}
+library(shiny)
+
+ui <- fluidPage(
+  textInput("name", "¿Cuál es tu nombre?"),
+  textOutput("greeting")
+)
+
+server <- function(input, output, session) {
+  output$greeting <- renderText(string())
+  string <- reactive(paste0("Hello ", input$name, " !!! :)"))
+}
+
+shinyApp(ui, server)
+```
+
+¡EL RESULTADO ES EL MISMO! El órden de ejecucción depende solamente de la **gráfica reactiva**, no del órden en que declararon las variables en la **función del servidor**.
+
+- Al igual que los **inputs**, también puedes usar los resultados de una **expresión reactiva** y presentarlos en un **output**.
+
+- De la misma forma que los **outputs**, las **expresiones reactivas** dependen de los **inputs**, y saben automáticamente cuándo necesitan actualizarse.
+
+Por lo anterior, usaremos el término **producers** para referirnos tanto a los **inputs** como a los **resultados de una expresión reactiva**, y usaremos el término **consumers** para referirnos tanto a las **expresiones reactivas** como a los **outputs**, tal como se muestra en la siguiente figura.
+
+![Consumers y producers](producers-consumers.png)
+
+### Beneficios de usar expesiones reactivas
+
+## Ejemplo
+
+### Descripción del caso de estudio
+
+En este ejemplo queremos comparar dos conjuntos de datos simulados, mediante un gráfico y una prueba de hipótesis.
+
+En primer lugar, generemos los dos conjuntos de datos aletorios, con los parámetros mostrados a continuación.
+
+```{r Genración de números aleatorios}
+x1 <- rnorm(100, mean = 0, sd = 0.5)
+x2 <- rnorm(200, mean = 0.15, sd = 0.9)
+# Echemos un vistazo a cada vector:
+x1
+x2
+```
+Ahora declaremos  la función **freqpoly()**, para generar la gráfica de dos polígonos de frecuencia de los vectores generados aleatoriamente, y la función **t_test()**, para realizar una prueba t que comparará los promedios de los conjuntos de datos generados aletoriamente, y nos muestra los resultados en una cadena de texto.
+
+```{r freqply y t_test}
+library(ggplot2)
+# Función para genera los polígonos de frecuencia
+freqpoly <- function(x1, x2, binwidth = 0.1, xlim = c(-3, 3)) {
+  df <- data.frame(
+    x = c(x1, x2),
+    g = c(rep("x1", length(x1)), rep("x2", length(x2)))
+  )
+
+  ggplot(df, aes(x, colour = g)) +
+    geom_freqpoly(binwidth = binwidth, size = 1) +
+    coord_cartesian(xlim = xlim)
+}
+# Función para correr la prueba t
+t_test <- function(x1, x2) {
+  test <- t.test(x1, x2)
+  
+  # use sprintf() to format t.test() results compactly
+  sprintf(
+    "p value: %0.3f\n[%0.2f, %0.2f]",
+    test$p.value, test$conf.int[1], test$conf.int[2]
+  )
+}
+```
+
+Probemos las funciones...
+
+```{r Probando las funciones}
+freqpoly(x1, x2) # Probamos la función para generar poĺigonos de frecuencia
+cat(t_test(x1, x2)) # Probemos la función para aplicar la prueba t
+```
+Ahora declaremos la UI
+
+```{r Declaramos la UI del ejemplo}
+library(shiny)
+ui <- fluidPage(
+  fluidRow(
+    column(4, 
+      "Distribution 1",
+      numericInput("n1", label = "n", value = 1000, min = 1),
+      numericInput("mean1", label = "µ", value = 0, step = 0.1),
+      numericInput("sd1", label = "σ", value = 0.5, min = 0.1, step = 0.1)
+    ),
+    column(4, 
+      "Distribution 2",
+      numericInput("n2", label = "n", value = 1000, min = 1),
+      numericInput("mean2", label = "µ", value = 0, step = 0.1),
+      numericInput("sd2", label = "σ", value = 0.5, min = 0.1, step = 0.1)
+    ),
+    column(4,
+      "Frequency polygon",
+      numericInput("binwidth", label = "Bin width", value = 0.1, step = 0.1),
+      sliderInput("range", label = "range", value = c(-3, 3), min = -5, max = 5)
+    )
+  ),
+  fluidRow(
+    column(9, plotOutput("hist")),
+    column(3, verbatimTextOutput("ttest"))
+  )
+)
+```
+
+NOTA: entre otras cosas, usamos fluidRow() para asegurar que, en la configuración de salida, los distintos elementos aparezcan en el mismo renglón. Además, column() crea una columna que se acoplará en dentro de la configuración fluidRow() declarada previamente.
+
+Ahora declaremos la función al servidor
+
+```{r Declaramos la función al servidor del ejemplo}
+server <- function(input, output, session) {
+  output$hist <- renderPlot({
+    x1 <- rnorm(input$n1, input$mean1, input$sd1)
+    x2 <- rnorm(input$n2, input$mean2, input$sd2)
+    
+    freqpoly(x1, x2, binwidth = input$binwidth, xlim = input$range)
+  }, res = 96)
+
+  output$ttest <- renderText({
+    x1 <- rnorm(input$n1, input$mean1, input$sd1)
+    x2 <- rnorm(input$n2, input$mean2, input$sd2)
+    
+    t_test(x1, x2)
+  })
+}
+```
+
+
+```{r Lanzamos nuestra app}
+shinyApp(ui,server)
+```
+
+**IMPORTANTE:** Uno podría pensar que, x1 se debería actualizar solo si, n1, mean1, o sd1 se cambian Y que x2 solo se debería actualizar cuando n2, mean2 o sd2 cambian pero, para Shiny solo exite una única salida, así, aunque cambie solo un parámetro, tanto x1 como x2, se actualizarán. Estas realaciones las podemos ver en la siguiente gráfica.
+
+![Gráfica reactiva mostrando que cada output depende de cada input](case-study-1.png)
+La app anterior es ineficiente, porque trabaja más de lo necesario, además, los datos con los que trabaja ttest provienen de una simulación diferente de la que trabaja hist. 
+
+Estos problemas, y otros, se pueden resolver si simplificamos nuestra app usando expresiones reactivas.
+
+Asi que, modificaremos nuestra función al servidor. En específico, reemplazaremos la declaración por separado de x1 y x2, declarándola solo una vez, con expresiones reactivas.
+
+```{r Declaramos la función al servidor del ejemplo con expresiones reactivas}
+server <- function(input, output, session) {
+  
+  x1 <- reactive(rnorm(input$n1, input$mean1, input$sd1))
+  x2 <- reactive(rnorm(input$n2, input$mean2, input$sd2))  
+  
+  output$hist <- renderPlot({
+    freqpoly(x1, x2, binwidth = input$binwidth, xlim = input$range)
+  }, res = 96)
+
+  output$ttest <- renderText({ 
+    t_test(x1, x2)
+  })
+}
+```
+
+Ahora las relaciones entre elementos se han simplificado.
+
+![Gráfica reactiva simplificada](case-study-2.png)
+
+Podemos ver que, ahora solo x1 y x2 afectan a ttst e hist. Además, binwidth y range solo afectan al gráfico. Así que, podemos agrupar estas relaciones por módulos, tal como se muestra en el siguiente gráfico.
+
+![Gráfica reactiva con énfasis en módulos](case-study-3.png)
+```{r Cargo emojis}
+library(emojifont)
+```
+
+**NOTA IMPORTANTE:** `r emo::ji("wow")` `r emo::ji("stop")` `r emo::ji("scream")` `r emo::ji("pin")` 
+
+Si en Shiny, copias y pegas un segmento de código, entonces deberías considerar usar una expresión reactiva.
+
+Verifiquemos el funcionamiento de la app
+```{r Verificamos el funcionamiento}
+library(shiny)
+library(ggplot2)
+shinyApp(ui, server)
+```
+Si obtenemos un error, es porque no podemos acceder a los valores de los inputs que están fuera de un contexto reactivo. Y, aunque no tuvieramos error, los cálculos solo se ejecutarían una vez en la sesión, no cada que la usuaria haga cambios en los botones.
+
+Por el contratio, las expresiones reactivas automáticamente computan resultados, y solo se actualizan cuando los inputs cambian. En el siguiente chunk, accederemos a los inputs en un contextos reactivo.
+
+```{r Declaramos la función al servidor del ejemplo con expresiones reactivas correctas}
+server <- function(input, output, session) {
+  
+  x1 <- reactive(rnorm(input$n1, input$mean1, input$sd1))
+  x2 <- reactive(rnorm(input$n2, input$mean2, input$sd2))  
+  
+  output$hist <- renderPlot({
+    freqpoly(x1(), x2(), binwidth = input$binwidth, xlim = input$range)
+  }, res = 96)
+
+  output$ttest <- renderText({ 
+    t_test(x1(), x2())
+  })
+}
+```
+
+Verifiquemos si ahora sí corre la app
+```{r Lanzamos la app llamando inputs que en un contexto reactivo}
+library(shiny)
+library(ggplot2)
+shinyApp(ui, server)
+```
+
+# Caso de estudio Accidentes USA
+
+Vamos a trabajar con los datos de la *National Electronic Injury Surveillance System* (NEISS), recolectados por la *Consumer Product Safety Commission*. Esta base de datos contiene registros longitudinales de accidentes atendidos en una muestra de hospitales en los Estados Unidos. 
+
+Cada observación se acompaña con una narrativa que describe cómo ocurrió el accidente. El caso presentado por <https://mastering-shiny.org/basic-case-study.html> trabaja con las observaciones registradas a partir de 2017.
+
+Las variables de interés son:
+
+- **trmt_date**: fecha en que la persona fue recibida en el hospital para ser atendida a causa de su accidente.
+- **age**, **sex** y **race**: información demográfica de la persona que sufrió el accidente.
+- **body_part**: parte del cuerpo lastimada por el accidente.
+- **diag**: diagnóstico de la herida causada por el accidente.
+- **prod_code**: código del principal producto involucrado en el accidente. 
+- **weight**: parámetro de riesgo poblacional de sufrir ese accidente.
+- **narrative**: breve descripción de cómo ocurrió el accidente.
+- **location**: lugar geográfico en dónde ocurrió el accidente.
+
+Además, emarejaremos los datos con dos bases de datos adicionales, la base de datos **products** y la base de datos **population**.
+
+La base de datos **products**, contiene los códigos de los respectivos productos involucrados en el accidente.
+
+- **code**: código del producto.
+- **title**: nombre del producto con el que se sufrió el accidente
+
+La base de datos **population**, contiene la población total de los Estados Unidos en el 2017,para cada combinación de las variables **sexo** y **edad**.
+
+- **year**: año
+- **age**: edad
+- **sex**: sexo
+- **n**: la respectiva cantidad poblacional
+
+```{r librerías para ejemplo accidentes}
+library(shiny)
+library(tidyverse)
+```
+
+Creamos un subdirectorio y ahí ponemos las bases de datos en formato rda
+```{r Creamos un subdirectorio}
+dir.create("neiss")
+```
+```{r Cargamos las bases de datos}
+load("neiss/injuries.rda")
+str(injuries)
+load("neiss/population.rda")
+str(injuries)
+load("neiss/products.rda")
+str(products)
+```
+
+## Exploración de los datos
+
+Antes de hacer cualquier otra cosa, es muy importante explorar los datos, SIEMPRE!.
+
+Por ejemplo, en la base de datos **injuries**, echemos un vistazo a los accidentes relacionados con *toilets*
+```{r Echamos un vistazo al código 649 toilets}
+injuries %>% 
+  filter(prod1 == 649)
+```
+
+¿Cuántos accidentes relacionados con *toilets* se reportan?, ¿en qué período?
+
+Ahora veamos, el estimado de ocurrencias de accidente, en todo Estados Unidos, según *location*.
+```{r Lugar dónde ocurrieron los accidentes}
+injuries %>%
+  count(location, wt = weight, sort = T)
+```
+Ahora el estimado según la parte del cuerpo herida (*body_part*).
+```{r Estimado parte del cuerpo herida}
+injuries %>%
+  count(body_part, wt = weight, sort = T)
+```
+
+Finalmente, el estimado por diagnóstico (*diag*)
+
+```{r Estimado por diagnóstico}
+injuries %>%
+  count(diag, wt = weight, sort = T)
+```
+
+Ahora explorarmos las ocurrencias por sexo y edad. (*sex*, *age*)
+```{r Un resumen por sexo y edad}
+resumen.por.sexo.y.edad<-injuries %>%
+  count(age, sex, wt = weight)
+```
+
+Ahora de forma visual
+```{r Gráfica de incidencia de accidentes en USA 2013-2017}
+resumen.por.sexo.y.edad %>%
+  ggplot(aes(age, n, colour = sex))+
+  geom_line() +
+  xlab("Edad") +
+  ylab("Total de Accidentes") +
+  ggtitle("Incidencia de accidentes en USA entre 2013 y 2017") + 
+  guides(fill = guide_legend(title = "Título"))+
+  scale_colour_hue(labels = c("Femenino", "Masculino", "Otro")) +
+  guides(colour=guide_legend(title = "Sexo")) +
+  theme_bw()
+```
+En el siguiente bosquejo inicial de nuestra app, usaremos las siguientes funciones
+
+## Declaramos la UI, ejemplo accidentes
+
+- **setNames( )**: Con base en los nombres de un objeto regresa el objeto en sí. Es decir, despliega el nombre del producto en la UI, y regresa al código del producto al servidor.
+
+- **fluidPage( )**: Declara la configuración de la página de salida. Consiste de filas que, a su vez, incluyen columnas.
+
+- **fluidRow( )**: Las filas existen par asegurar que ciertos elementos se alinean en el mismo "renglón".
+
+- **column( )**: Las columnas existen para distribuir el espacio horizontal entre los elementos.
+
+En este diseño, tenemos tres filas o renglones. El primer renglón lo asignaremos para los inputs, el segundo para las tablas, y el tercero para el gráfico.
+
+```{r Declaramos la UI ejemplo accidentes}
+prod_codes <- setNames(products$code, products$title)
+
+ui <- fluidPage(
+  fluidRow(
+    column(6,
+      selectInput("code", "Product", choices = prod_codes)
+    )
+  ),
+  fluidRow(
+    column(4, tableOutput("diag")),
+    column(4, tableOutput("body_part")),
+    column(4, tableOutput("location"))
+  ),
+  fluidRow(
+    column(12, plotOutput("age_sex"))
+  )
+)
+server <- function(input, output, sesion){
+  
+}
+shinyApp(ui,server)
+```
+En el diseño antes mostrado, declaramos un espacio para un input desplegable en el renglón 1, columna 6. 
+
+También declaramos tres espacios para outputs tipo table (i.e., tableOutput) en el renglón 2, columna 4.
+
+Finalmente, declaramos un espacio para un output que muestre un gráfico (i.e., plor Outout) en el renglón 3, columna 12.
+
+**PREGUNTA:** ¿Por qué solo podemos ver el espacio asignado al primer renglón.
+
+## Declaramos la función al servidor, ejemplo accidentes
+
+```{r Declaramos la función al servidor ejemplo accidentes}
+library(dplyr)
+library(ggplot2)
+server <- function(input, output, session) {
+  selected <- reactive(injuries %>% filter(prod1 == input$code))
+
+  output$diag <- renderTable(
+    selected() %>% count(diag, wt = weight, sort = TRUE)
+  )
+  output$body_part <- renderTable(
+    selected() %>% count(body_part, wt = weight, sort = TRUE)
+  )
+  output$location <- renderTable(
+    selected() %>% count(location, wt = weight, sort = TRUE)
+  )
+  
+  resumen.por.sexo.y.edad  <- reactive({
+    selected() %>%
+    count(age, sex, wt = weight)
+
+  })
+  
+  output$age_sex <- renderPlot({
+    resumen.por.sexo.y.edad() %>%
+      ggplot(aes(age, n, colour = sex))+
+      geom_line() +
+      xlab("Edad") +
+      ylab("Muestra nacional de accidentes") +
+      ggtitle("Total de accidentes registrados en USA entre 2013 y 2017") +
+      guides(fill = guide_legend(title = "Título")) +
+      scale_colour_hue(labels = c("Femenino", "Masculino", "Otro")) +
+      guides(colour=guide_legend(title = "Sexo")) +
+      theme_bw()
+  }, res = 96)
+  
+}
+```
+
+## Integramos la app del ejemplo accidentes
+
+```{r Integramos la app del ejemplo accidentes}
+library(shiny)
+shinyApp(ui,server)
+```
+
+Una vez que tenemos nuestros componente funcionando en su lugar correcto, es momento de mejorar nuestra app. 
+
+# Caso de estudio Lupus
+
+## Leemos y exploramos la base de datos de lupus
+```{r}
+
+```
+
+
